@@ -1,6 +1,6 @@
 package day7
 
-import "adventofcode-2025/common"
+import "adventofcode-2024/common"
 
 func Puzzle2() int {
 	lines := common.ReadFileByLines("./inputs/day7.txt")

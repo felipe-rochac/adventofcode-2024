@@ -1,7 +1,7 @@
 package day8
 
 import (
-	"adventofcode-2025/common"
+	"adventofcode-2024/common"
 )
 
 type Coordinate struct {

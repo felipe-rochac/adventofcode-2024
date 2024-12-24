@@ -1,6 +1,6 @@
 package day5
 
-import "adventofcode-2025/common"
+import "adventofcode-2024/common"
 
 func checkCorrectlyUpdatesAndFix(rules []Rule, instructions *[]Instruction) int {
 	sum := 0

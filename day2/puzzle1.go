@@ -1,7 +1,7 @@
 package day2
 
 import (
-	"adventofcode-2025/common"
+	common "adventofcode-2024/common"
 	"math"
 	"strconv"
 	"strings"

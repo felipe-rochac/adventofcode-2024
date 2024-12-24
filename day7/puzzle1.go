@@ -1,7 +1,7 @@
 package day7
 
 import (
-	"adventofcode-2025/common"
+	"adventofcode-2024/common"
 	"fmt"
 	"log"
 	"strconv"

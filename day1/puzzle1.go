@@ -1,7 +1,7 @@
 package day1
 
 import (
-	"adventofcode-2025/common"
+	"adventofcode-2024/common"
 	"fmt"
 	"log"
 	"math"

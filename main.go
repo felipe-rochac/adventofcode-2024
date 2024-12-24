@@ -1,7 +1,7 @@
 package main
 
 import (
-	day "adventofcode-2024/day2"
+	day "adventofcode-2024/day16"
 	"encoding/base64"
 	"fmt"
 	"log"

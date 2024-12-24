@@ -1,7 +1,7 @@
 package day6
 
 import (
-	"adventofcode-2025/common"
+	"adventofcode-2024/common"
 )
 
 type Position struct {
