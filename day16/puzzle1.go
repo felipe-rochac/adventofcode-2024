@@ -2,31 +2,91 @@ package day16
 
 import (
 	"adventofcode-2024/common"
-	"fmt"
-	"math"
+	"container/heap"
 )
 
-type position struct {
-	row, col int
+type Point struct {
+	score, direction, x, y int
+	path                   map[[2]int]bool
 }
 
-type location struct {
-	location  position
-	direction rune
+// PriorityQueue implements a priority queue for Points
+type PriorityQueue []Point
+
+func (pq PriorityQueue) Len() int           { return len(pq) }
+func (pq PriorityQueue) Less(i, j int) bool { return pq[i].score < pq[j].score } // Min-Heap based on score
+func (pq PriorityQueue) Swap(i, j int)      { pq[i], pq[j] = pq[j], pq[i] }
+
+func (pq *PriorityQueue) Push(x interface{}) {
+	*pq = append(*pq, x.(Point))
 }
 
-type game struct {
-	path  [][]location
-	score []int
+func (pq *PriorityQueue) Pop() interface{} {
+	old := *pq
+	n := len(old)
+	item := old[n-1]
+	*pq = old[:n-1]
+	return item
 }
 
-func findReindeerAndExit(grid [][]rune) (reindeer, exit position) {
+func seekExit(grid [][]rune, start, end [2]int) int {
+	directions := [][2]int{
+		{0, 1},  // Right
+		{1, 0},  // Down
+		{0, -1}, // Left
+		{-1, 0}, // Up
+	}
+
+	grid[end[0]][end[1]] = '.'
+	pq := &PriorityQueue{}
+	heap.Init(pq)
+	heap.Push(pq, Point{score: 0, direction: 0, x: start[0], y: start[1]})
+
+	visited := make(map[[3]int]bool)
+
+	for pq.Len() > 0 {
+		point := heap.Pop(pq).(Point)
+		score, d, i, j := point.score, point.direction, point.x, point.y
+
+		if [2]int{i, j} == end {
+			return score
+		}
+
+		if visited[[3]int{d, i, j}] {
+			continue
+		}
+
+		visited[[3]int{d, i, j}] = true
+
+		// Move forward
+		x, y := i+directions[d][0], j+directions[d][1]
+		if grid[x][y] == '.' && !visited[[3]int{d, x, y}] {
+			heap.Push(pq, Point{score: score + 1, direction: d, x: x, y: y})
+		}
+
+		// Turn left
+		left := (d - 1 + 4) % 4
+		if !visited[[3]int{left, i, j}] {
+			heap.Push(pq, Point{score: score + 1000, direction: left, x: i, y: j})
+		}
+
+		// Turn right
+		right := (d + 1) % 4
+		if !visited[[3]int{right, i, j}] {
+			heap.Push(pq, Point{score: score + 1000, direction: right, x: i, y: j})
+		}
+	}
+
+	return -1 // No path found
+}
+
+func findReindeerAndExit(grid [][]rune) (reindeer, exit Point) {
 	for r, row := range grid {
 		for c, col := range row {
 			if col == 'E' {
-				exit = position{r, c}
+				exit = Point{0, 0, r, c, nil}
 			} else if col == 'S' {
-				reindeer = position{r, c}
+				reindeer = Point{0, 0, r, c, nil}
 			}
 		}
 	}
@@ -34,125 +94,13 @@ func findReindeerAndExit(grid [][]rune) (reindeer, exit position) {
 	return reindeer, exit
 }
 
-func seekExit(grid [][]rune, path []location, visited map[position]bool, pos position, direction rune, exitPos position, g *game) {
-	if visited[pos] {
-		return
-	}
-
-	// Mark the position as visited
-	visited[pos] = true
-	p := location{pos, direction}
-	path = append(path, p)
-
-	// If we reach the exit, save the path and backtrack
-	if pos == exitPos {
-		score := calculateScore(path)
-		g.score = append(g.score, score)
-		// Store a copy of the path to the game
-		g.path = append(g.path, append([]location{}, path...))
-		visited[pos] = false // Unmark on backtrack
-		return
-	}
-
-	directions := []rune{'U', 'D', 'L', 'R'}
-	move := func(p position, direction rune) position {
-		switch direction {
-		case 'U':
-			return position{p.row - 1, p.col}
-		case 'D':
-			return position{p.row + 1, p.col}
-		case 'L':
-			return position{p.row, p.col - 1}
-		case 'R':
-			return position{p.row, p.col + 1}
-		}
-		return p
-	}
-
-	// Explore all possible directions
-	for _, dir := range directions {
-		nextPos := move(pos, dir)
-		// Check if the next position is valid (not a wall and within bounds)
-		if nextPos.row >= 0 && nextPos.row < len(grid) &&
-			nextPos.col >= 0 && nextPos.col < len(grid[0]) &&
-			grid[nextPos.row][nextPos.col] != '#' {
-			seekExit(grid, path, visited, nextPos, dir, exitPos, g)
-		}
-	}
-
-	// Backtrack
-	visited[pos] = false
-	path = path[:len(path)-1]
-}
-
-func isClockwise(prev, after rune) bool {
-	return ((prev == 'L' || prev == 'R') && (after == 'U' || after == 'D')) || ((prev == 'U' || prev == 'D') && (after == 'L' || after == 'R'))
-}
-
-func calculateScore(path []location) int {
-	dir := path[0].direction
-	score := 0
-	for i := 1; i < len(path); i++ {
-		if isClockwise(dir, path[i].direction) {
-			score += 1001
-		} else {
-			score += 1
-		}
-		dir = path[i].direction
-	}
-
-	return score
-}
-
-func copyMatrix(src [][]rune) [][]rune {
-	// Create a new matrix with the same dimensions as the source
-	dst := make([][]rune, len(src))
-	for i := range src {
-		// Allocate a new slice for each row and copy the elements
-		dst[i] = make([]rune, len(src[i]))
-		copy(dst[i], src[i])
-	}
-	return dst
-}
-
-func printPath(grid [][]rune, path []location, score, index int) {
-	g := copyMatrix(grid)
-
-	for _, p := range path {
-		g[p.location.row][p.location.col] = p.direction
-	}
-
-	fmt.Println(fmt.Sprintf(`%d: Movements %d Score %d`, index, len(path), score))
-	for _, row := range g {
-		for _, col := range row {
-			fmt.Print(string(col))
-		}
-		fmt.Println()
-	}
-	fmt.Println()
-}
-
 func Puzzle1() int {
 	grid := common.ReadFileByGrid("./day16/day16.txt")
 
-	reindeer, exit := findReindeerAndExit(grid)
-	visited := make(map[position]bool)
-	path := []location{}
-	g := &game{path: [][]location{}}
+	start, exit := findReindeerAndExit(grid)
 
-	seekExit(grid, path, visited, reindeer, 'L', exit, g)
+	score := seekExit(grid, [2]int{start.x, start.y}, [2]int{exit.x, exit.y})
 
-	lowestStepsIndex := -1
-	lowestScore := math.MaxInt32
-
-	for i, _ := range g.path {
-		if g.score[i] < lowestScore {
-			lowestScore = g.score[i]
-			lowestStepsIndex = i
-		}
-	}
-
-	printPath(grid, g.path[lowestStepsIndex], g.score[lowestStepsIndex], lowestStepsIndex)
-
-	return lowestScore
+	// < 500716
+	return score
 }
