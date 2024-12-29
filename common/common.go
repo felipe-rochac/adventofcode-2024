@@ -169,3 +169,11 @@ func AppendToFile(filename, content string) error {
 
 	return nil
 }
+
+func CopyMap[K comparable, V any](original map[K]V) map[K]V {
+	copy := make(map[K]V, len(original))
+	for key, value := range original {
+		copy[key] = value
+	}
+	return copy
+}
