@@ -177,3 +177,23 @@ func CopyMap[K comparable, V any](original map[K]V) map[K]V {
 	}
 	return copy
 }
+
+func CopyGrid[V any](original [][]V) [][]V {
+	temp := make([][]V, len(original))
+	for i, row := range original {
+		// Create a new slice for each inner slice
+		temp[i] = make([]V, len(row))
+		copy(temp[i], row) // Copy elements from the original inner slice
+	}
+	return temp
+}
+
+func CountOccurrences[T comparable](arr []T, value T) int {
+	count := 0
+	for _, v := range arr {
+		if v == value {
+			count++
+		}
+	}
+	return count
+}

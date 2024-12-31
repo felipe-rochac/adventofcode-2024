@@ -30,3 +30,7 @@ func (q *Queue[T]) IsEmpty() bool {
 func (q *Queue[T]) Size() int {
 	return len(q.items)
 }
+
+func (q *Queue[T]) Empty() {
+	q.items = make([]T, 0)
+}
