@@ -148,3 +148,73 @@ func (dijkstra *Dijkstra) MatrixWithObstacles(grid [][]rune, obstacle rune, star
 
 	return -1 // Return -1 if no path exists
 }
+
+func (dijkstra *Dijkstra) MatrixWithObstaclesAndCheat(grid [][]rune, obstacle rune, start, end Point, cheatCount int, cheatPosition map[Point]bool) int {
+	rows := len(grid)
+	cols := len(grid[0])
+	cheats := 0
+
+	// Distance map
+	distances := make([][]int, rows)
+	for i := range distances {
+		distances[i] = make([]int, cols)
+		for j := range distances[i] {
+			distances[i][j] = math.MaxInt32
+		}
+	}
+	distances[start.X][start.Y] = 0
+
+	// Priority queue
+	pq := &PriorityQueue{}
+	heap.Init(pq)
+	heap.Push(pq, PriorityQueueItem{Point: start, Distance: 0})
+
+	// Directions for moving up, down, left, and right
+	directions := []Point{
+		{X: -1, Y: 0}, // Up
+		{X: 1, Y: 0},  // Down
+		{X: 0, Y: -1}, // Left
+		{X: 0, Y: 1},  // Right
+	}
+
+	for pq.Len() > 0 {
+		current := heap.Pop(pq).(PriorityQueueItem)
+		currPoint := current.Point
+		currDistance := current.Distance
+
+		// If we reach the end point
+		if currPoint == end {
+			// It was not possible to use cheat because all possibilites where used (cheatPositions)
+			if cheatCount > 0 && cheats == 0 {
+				return -1
+			}
+			return currDistance
+		}
+
+		// Explore neighbors
+		for _, d := range directions {
+			neighbor := Point{X: currPoint.X + d.X, Y: currPoint.Y + d.Y}
+			if neighbor.X >= 0 && neighbor.X < rows && neighbor.Y >= 0 && neighbor.Y < cols {
+				// Skip obstacles but allow some cheats
+				if grid[neighbor.X][neighbor.Y] == obstacle {
+					if cheats >= cheatCount || cheatPosition[neighbor] {
+						continue
+					}
+
+					cheats++
+					cheatPosition[neighbor] = true
+				}
+
+				// Calculate cost based on the rune value
+				cost := 1 // Default cost for traversable cells
+				newDist := currDistance + cost
+				if newDist < distances[neighbor.X][neighbor.Y] {
+					distances[neighbor.X][neighbor.Y] = newDist
+					heap.Push(pq, PriorityQueueItem{Point: neighbor, Distance: newDist})
+				}
+			}
+		}
+	}
+
+	return -1 // Return -1 if no path exists
+}
