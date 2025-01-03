@@ -197,3 +197,24 @@ func CountOccurrences[T comparable](arr []T, value T) int {
 	}
 	return count
 }
+
+func Combine[T comparable](array []T, x int) [][]T {
+	if x == 0 {
+		return [][]T{{}} // Return an empty combination
+	}
+	if len(array) < x {
+		return [][]T{} // Not enough elements to create a combination
+	}
+
+	// Exclude the first element and combine the rest
+	exclude := Combine(array[1:], x)
+
+	// Include the first element
+	include := Combine(array[1:], x-1)
+	for i := range include {
+		include[i] = append([]T{array[0]}, include[i]...)
+	}
+
+	// Return both included and excluded combinations
+	return append(exclude, include...)
+}

@@ -49,7 +49,7 @@ func countWalls(grid [][]rune) (int, []common.Point) {
 }
 
 func Puzzle1() int {
-	lines := common.ReadFileByLines("./day20/input.txt")
+	lines := common.ReadFileByLines("./day20/test.txt")
 
 	grid, start, end := parseGrid(lines)
 
