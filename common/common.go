@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"unicode"
 )
 
 func ParseInt(r rune) int {
@@ -139,6 +140,18 @@ func SliceContains[T comparable](slice []T, element T) bool {
 	return false
 }
 
+func CompareIntSlices(a, b []int) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
 func WriteToFile(fileName string, content string) {
 	file, err := os.Create(fileName)
 	if err != nil {
@@ -188,6 +201,14 @@ func CopyGrid[V any](original [][]V) [][]V {
 	return temp
 }
 
+func CopyArray[V any](original []V) []V {
+	temp := make([]V, len(original))
+	for i, row := range original {
+		temp[i] = row
+	}
+	return temp
+}
+
 func CountOccurrences[T comparable](arr []T, value T) int {
 	count := 0
 	for _, v := range arr {
@@ -217,4 +238,13 @@ func Combine[T comparable](array []T, x int) [][]T {
 
 	// Return both included and excluded combinations
 	return append(exclude, include...)
+}
+
+func RemoveAlpha(s string) string {
+	return strings.Map(func(r rune) rune {
+		if unicode.IsLetter(r) {
+			return -1 // Removes the character
+		}
+		return r
+	}, s)
 }

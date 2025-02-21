@@ -2,212 +2,118 @@ package day21
 
 import (
 	"adventofcode-2024/common"
-	"math"
+	"strings"
 )
 
-type position struct {
-	row, col int
+var numpad = map[string][2]int{
+	"7": {0, 0}, "8": {0, 1}, "9": {0, 2},
+	"4": {1, 0}, "5": {1, 1}, "6": {1, 2},
+	"1": {2, 0}, "2": {2, 1}, "3": {2, 2},
+	"0": {3, 1}, "A": {3, 2},
 }
 
-type edge struct {
-	to     position
-	weight int
+var dirpad = map[string][2]int{
+	"^": {0, 1}, "A": {0, 2},
+	"<": {1, 0}, "v": {1, 1}, ">": {1, 2},
 }
 
-type actor struct {
-	curr, dest position
-	pad        [][]rune
+func repeat(r rune, count int) string {
+	if count <= 0 {
+		return ""
+	}
+	return strings.Repeat(string(r), count)
 }
 
-type path struct {
-	current position
-	actions []rune
-}
-
-func buildGraph(matrix [][]rune) map[position][]edge {
-	rows, cols := len(matrix), len(matrix[0])
-	directions := []position{{0, 1}, {1, 0}, {0, -1}, {-1, 0}} // Right, Down, Left, Up
-	graph := make(map[position][]edge)
-
-	for r := 0; r < rows; r++ {
-		for c := 0; c < cols; c++ {
-			curr := position{r, c}
-			for _, d := range directions {
-				nr, nc := r+d.row, c+d.col
-				if nr >= 0 && nc >= 0 && nr < rows && nc < cols {
-					next := position{nr, nc}
-					graph[curr] = append(graph[curr], edge{to: next, weight: 1})
-				}
+// CreateGraph function
+func createGraph(keypad map[string][2]int, invalidCoords [2]int) map[[2]string]string {
+	graph := make(map[[2]string]string)
+	for a, coords1 := range keypad {
+		x1, y1 := coords1[0], coords1[1]
+		for b, coords2 := range keypad {
+			x2, y2 := coords2[0], coords2[1]
+			path := ""
+			path += repeat('<', y1-y2)
+			path += repeat('v', x2-x1)
+			path += repeat('^', x1-x2)
+			path += repeat('>', y2-y1)
+			if invalidCoords == [2]int{x1, y2} || invalidCoords == [2]int{x2, y1} {
+				path = reverse(path)
 			}
+			graph[[2]string{a, b}] = path + "A"
 		}
 	}
 
 	return graph
 }
 
-func getKeypadGraph() [][]rune {
-	return [][]rune{
-		{'7', '8', '9'},
-		{'4', '5', '6'},
-		{'1', '2', '3'},
-		{' ', '0', 'A'},
+// Reverse a string
+func reverse(s string) string {
+	runes := []rune(s)
+	for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
+		runes[i], runes[j] = runes[j], runes[i]
 	}
+	return string(runes)
 }
 
-func getDestinationKeypadPosition(code rune) position {
-	switch code {
-	case '9':
-		return position{0, 2}
-	case '8':
-		return position{0, 1}
-	case '7':
-		return position{0, 0}
-	case '6':
-		return position{1, 2}
-	case '5':
-		return position{1, 1}
-	case '4':
-		return position{1, 0}
-	case '3':
-		return position{2, 2}
-	case '2':
-		return position{2, 1}
-	case '1':
-		return position{2, 0}
-	case '0':
-		return position{3, 1}
-	default:
-		return position{3, 2}
+// Convert function
+func convert(sequence string, graph map[[2]string]string) string {
+	value, exists := conversionsCache[sequence]
+
+	if exists {
+		return value
 	}
+
+	conversion := ""
+	prev := "A"
+	for _, char := range sequence {
+		conversion += graph[[2]string{prev, string(char)}]
+		prev = string(char)
+	}
+	conversionsCache[sequence] = conversion
+
+	if len(conversion) > cacheMaxLenght {
+		cacheMaxLenght = len(conversion)
+	}
+
+	return conversion
 }
 
-func getDirectionalPadGraph() [][]rune {
-	return [][]rune{
-		{' ', '^', 'A'},
-		{'<', 'v', '>'},
+func hasOnCache(sequence string) (string, bool) {
+	value, exists := conversionsCache[sequence]
+
+	if exists {
+		return value, true
 	}
+
+	if cacheMaxLenght == 0 {
+		return "", false
+	}
+
+	return "", false
 }
 
-func getDestinationDirectionalpadPosition(code rune) position {
-	switch code {
-	case '^':
-		return position{0, 1}
-	case '<':
-		return position{1, 0}
-	case 'v':
-		return position{1, 1}
-	case '>':
-		return position{1, 2}
-	default:
-		return position{0, 2}
-	}
-}
-
-func getShortestPath(actor actor) []rune {
-	rows := len(actor.pad)
-	cols := len(actor.pad[0])
-	start := actor.curr
-	end := actor.dest
-	visited := make(map[position]bool)
-
-	// Distance map
-	distances := make([][]int, rows)
-	for i := 0; i < rows; i++ {
-		distances[i] = make([]int, cols)
-		for j := 0; j < cols; j++ {
-			distances[i][j] = math.MaxInt32
-		}
-	}
-	distances[start.row][start.col] = 0
-
-	// Priority queue
-	queue := []path{{start, []rune{}}}
-
-	// Directions for moving up, down, left, and right
-	directions := []position{
-		{row: -1, col: 0}, // Up
-		{row: 1, col: 0},  // Down
-		{row: 0, col: -1}, // Left
-		{row: 0, col: 1},  // Right
-	}
-
-	action := map[position]rune{
-		{row: -1, col: 0}: '^',
-		{row: 1, col: 0}:  'v',
-		{row: 0, col: 1}:  '>',
-		{row: 0, col: -1}: '<',
-	}
-
-	for len(queue) > 0 {
-		curr := queue[0]
-		queue = queue[1:]
-
-		// If we reach the end point
-		if curr.current == end {
-			return curr.actions
-		}
-
-		// Explore neighbors
-		for _, d := range directions {
-			next := position{curr.current.row + d.row, curr.current.col + d.col}
-
-			if next.row < 0 || next.col < 0 || next.row >= rows || next.col >= cols {
-				continue
-			}
-
-			if visited[next] {
-				continue
-			}
-
-			queue = append(queue, path{next, append(curr.actions, action[d])})
-		}
-	}
-
-	return []rune{}
-}
-
-func pressDirectionalPad(actions []rune, actor *actor) []rune {
-	requiredActions := make([]rune, 0)
-	for _, a := range actions {
-		actor.dest = getDestinationDirectionalpadPosition(a)
-		directionActions := getShortestPath(*actor)
-		actor.curr = actor.dest
-		directionActions = append(directionActions, 'A')
-		requiredActions = append(requiredActions, directionActions...)
-	}
-	return requiredActions
-}
+var conversionsCache map[string]string
+var cacheMaxLenght int
 
 func Puzzle1() int {
-	codes := common.ReadFileByLines("./day21/test.txt")
+	// Generate graphs
+	codes := common.ReadFileByLines("./day21/input.txt")
+	numpadGraph := createGraph(numpad, [2]int{3, 0})
+	dirpadGraph := createGraph(dirpad, [2]int{0, 0})
+	conversionsCache = make(map[string]string)
+	cacheMaxLenght = 0
 
-	keypad := getKeypadGraph()
-	directionPad := getDirectionalPadGraph()
+	complexity := 0
+	// Example usage of convert
+	for _, sequence := range codes {
+		code := common.ParseStrToInt(common.RemoveAlpha(sequence))
+		numpadSequence := convert(sequence, numpadGraph)
 
-	initialPosKeypad := getDestinationKeypadPosition('A')
-	initialPosDirectionalPad := getDestinationDirectionalpadPosition('A')
+		robot1Sequence := convert(numpadSequence, dirpadGraph)
 
-	commander := actor{initialPosDirectionalPad, position{0, 0}, directionPad}
-	directionRobot1 := actor{initialPosDirectionalPad, position{0, 0}, directionPad}
-	directionRobot2 := actor{initialPosDirectionalPad, position{0, 0}, directionPad}
-	keypadRobot := actor{initialPosKeypad, position{0, 0}, keypad}
-	pressedKeys := make([]rune, 0)
+		robot2Sequence := convert(robot1Sequence, dirpadGraph)
 
-	for _, code := range codes {
-		for _, r := range code {
-			keypadRobot.dest = getDestinationKeypadPosition(r)
-			actions := getShortestPath(keypadRobot)
-			actions = append(actions, 'A')
-
-			actions2 := pressDirectionalPad(actions, &directionRobot2)
-
-			actions3 := pressDirectionalPad(actions2, &directionRobot1)
-
-			actions4 := pressDirectionalPad(actions3, &commander)
-
-			pressedKeys = append(pressedKeys, actions4...)
-		}
+		complexity += len(robot2Sequence) * code
 	}
-
-	return 0
+	return complexity
 }
